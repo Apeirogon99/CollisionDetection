@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Public">
+      <UniqueIdentifier>{0992b334-83d3-4e0c-8a33-e1539b679273}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Private">
+      <UniqueIdentifier>{b7d0734a-e8e3-4f98-95aa-8d66052c6d13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pch">
+      <UniqueIdentifier>{53834eef-a948-4284-904c-afc323cefccf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="main">
+      <UniqueIdentifier>{ffb4da2b-805e-4045-90ed-5edc001f54a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Private\Search">
+      <UniqueIdentifier>{54a98d29-bb9b-4530-91a6-d3bf548330cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Public\Search">
+      <UniqueIdentifier>{3424924b-5132-4d28-8a8e-b52c30e929c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Test">
+      <UniqueIdentifier>{67b34c62-eb5b-4a5f-8afe-66b6ca65e01b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp">
+      <Filter>pch</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="CollisionConfig.cpp">
+      <Filter>Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Actor.cpp">
+      <Filter>Private</Filter>
+    </ClCompile>
+    <ClCompile Include="KDTree.cpp">
+      <Filter>Private\Search</Filter>
+    </ClCompile>
+    <ClCompile Include="Widget.cpp" />
+    <ClCompile Include="TaskTimer.cpp">
+      <Filter>Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Attack.cpp">
+      <Filter>Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Array.cpp">
+      <Filter>Private\Search</Filter>
+    </ClCompile>
+    <ClCompile Include="QuadTree.cpp">
+      <Filter>Private\Search</Filter>
+    </ClCompile>
+    <ClCompile Include="SAT.cpp">
+      <Filter>Private\Search</Filter>
+    </ClCompile>
+    <ClCompile Include="Arrow.cpp">
+      <Filter>Test</Filter>
+    </ClCompile>
+    <ClCompile Include="Parry.cpp">
+      <Filter>Test</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h">
+      <Filter>pch</Filter>
+    </ClInclude>
+    <ClInclude Include="CollisionConfig.h">
+      <Filter>Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Actor.h">
+      <Filter>Public</Filter>
+    </ClInclude>
+    <ClInclude Include="KDTree.h">
+      <Filter>Public\Search</Filter>
+    </ClInclude>
+    <ClInclude Include="ICollisionSystem.h">
+      <Filter>Public\Search</Filter>
+    </ClInclude>
+    <ClInclude Include="Widget.h" />
+    <ClInclude Include="TaskTimer.h">
+      <Filter>Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Attack.h">
+      <Filter>Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Array.h">
+      <Filter>Public\Search</Filter>
+    </ClInclude>
+    <ClInclude Include="QuadTree.h">
+      <Filter>Public\Search</Filter>
+    </ClInclude>
+    <ClInclude Include="SAT.h">
+      <Filter>Public\Search</Filter>
+    </ClInclude>
+    <ClInclude Include="Arrow.h">
+      <Filter>Test</Filter>
+    </ClInclude>
+    <ClInclude Include="Parry.h">
+      <Filter>Test</Filter>
+    </ClInclude>
+    <ClInclude Include="Detection.h">
+      <Filter>Public\Search</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
