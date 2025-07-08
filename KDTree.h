@@ -1,5 +1,7 @@
 #pragma once
 
+#define USE_MEMORY_POOL 1
+
 class KDNode
 {
 public:

@@ -19,8 +19,8 @@
 #endif
 
 #define USE_SAT 0
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 800
+#define WINDOW_WIDTH 1000
+#define WINDOW_HEIGHT 1000
 #define FRAME 60
 
 #pragma region DEFAULT

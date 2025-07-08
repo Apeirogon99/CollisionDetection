@@ -17,11 +17,13 @@ CollisionConfig::CollisionConfig(const uint32& InMaxObject, const ESearchType& I
         mCollisionSystem = new KDTree(InMaxObject);
         break;
     case ESearchType::QUAD_TREE:
-        mCollisionSystem = new QuadTree({ WINDOW_WIDTH - 100, WINDOW_HEIGHT - 100 });
+        mCollisionSystem = new QuadtreeManager({ WINDOW_WIDTH, WINDOW_HEIGHT });
         break;
     default:
         break;
     }
+
+    mCollisionSystem->Init();
 
     mWidget = new Widget();
     mWidget->SetFont("DNFBitBitTTF.ttf");
@@ -34,7 +36,7 @@ CollisionConfig::~CollisionConfig()
 
 void CollisionConfig::Run()
 {
-    int64 searchTime[100] = { 0, };
+    double searchTime[100] = { 0, };
     int64 searchTimeCount = 0;
     while (mWindow->isOpen())
     {
@@ -101,14 +103,19 @@ void CollisionConfig::Run()
 
         auto search = [&]()
             {
-                //mCollisionSystem->Search(mAttack);
-
-                mCollisionSystem->AllSearch();
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
+                {
+                    mCollisionSystem->Search(mAttack);
+                }
+                else
+                {
+                    mCollisionSystem->AllSearch();
+                }
             };
         searchTime[searchTimeCount] = mTaskTimer.MeasureTask(search);
         searchTimeCount = (searchTimeCount + 1) % 100;
 
-        int64 sum = 0;
+        double sum = 0;
         for (size_t i = 0; i < 100; ++i)
         {
             sum += searchTime[i];

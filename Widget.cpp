@@ -76,44 +76,50 @@ void Widget::SetFont(const std::string& InTTFPath)
     }
 }
 
-void Widget::UpdateEventTime(const int64& InTime)
+void Widget::UpdateEventTime(const double InTime)
 {
     std::stringstream stream;
+    stream << std::fixed << std::setprecision(1);
     stream << "Event Time: " << InTime << "ms";
     mTexts[static_cast<size_t>(EWidgetType::Event)].setString(stream.str());
 }
 
-void Widget::UpdateTickTime(const int64& InTime)
+void Widget::UpdateTickTime(const double InTime)
 {
     std::stringstream stream;
+    stream << std::fixed << std::setprecision(1);
     stream << "Tick Time: " << InTime << "ms";
     mTexts[static_cast<size_t>(EWidgetType::Tick)].setString(stream.str());
 }
 
-void Widget::UpdateDrawTime(const int64& InTime)
+void Widget::UpdateDrawTime(const double InTime)
 {
     std::stringstream stream;
+    stream << std::fixed << std::setprecision(1);
     stream << "Draw Time: " << InTime << "ms";
     mTexts[static_cast<size_t>(EWidgetType::Draw)].setString(stream.str());
 }
 
-void Widget::UpdateObjectCount(const int64& InCount)
+void Widget::UpdateObjectCount(const double InCount)
 {
     std::stringstream stream;
+    stream << std::fixed << std::setprecision(1);
     stream << "Object Count: " << InCount;
     mTexts[static_cast<size_t>(EWidgetType::ObjectCount)].setString(stream.str());
 }
 
-void Widget::UpdateBuildTime(const int64& InTime)
+void Widget::UpdateBuildTime(const double InTime)
 {
     std::stringstream stream;
+    stream << std::fixed << std::setprecision(1);
     stream << "Build Time: " << InTime << "ms";
     mTexts[static_cast<size_t>(EWidgetType::BuildTime)].setString(stream.str());
 }
 
-void Widget::UpdateSearchTime(const int64& InTime)
+void Widget::UpdateSearchTime(const double InTime)
 {
     std::stringstream stream;
+    stream << std::fixed << std::setprecision(1);
     stream << "Search Time: " << InTime << "ms";
     mTexts[static_cast<size_t>(EWidgetType::SearchTime)].setString(stream.str());
 }

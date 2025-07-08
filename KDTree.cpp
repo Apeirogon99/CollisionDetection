@@ -3,6 +3,7 @@
 
 KDTree::KDTree(const uint32& inPoolSize)
 {
+
 	if (inPoolSize > UINT32_MAX)
 	{
 		wprintf(L"[KD-Tree] [Init] It's too big to make\n");
@@ -17,7 +18,9 @@ KDTree::KDTree(const uint32& inPoolSize)
 
 	for (uint32 index = 0; index < newPoolsize; ++index)
 	{
+#if USE_MEMORY_POOL
 		mNodesPool.push_back(new KDNode(index));
+#endif
 		mAvailableNodeNumber.push_back(index);
 	}
 }
@@ -41,12 +44,24 @@ void KDTree::Build(std::vector<Actor*>& InActors)
 
 	for (Actor* actor : InActors)
 	{
+#if USE_MEMORY_POOL
 		KDNode* nextNode = NextAvailableNode();
 		if (nextNode == nullptr)
 		{
 			return;
 		}
 		nextNode->InitNode(actor);
+#else
+		const uint16 nextNumber = mAvailableNodeNumber.front();
+		mAvailableNodeNumber.pop_front();
+
+		KDNode* nextNode = new KDNode(nextNumber);
+		if (nextNode == nullptr)
+		{
+			return;
+		}
+		nextNode->InitNode(actor);
+#endif
 
 		if (mUseNode.size() != 0)
 		{
@@ -58,6 +73,7 @@ void KDTree::Build(std::vector<Actor*>& InActors)
 
 void KDTree::Destroy()
 {
+#if USE_MEMORY_POOL
 	for (KDNode* node : mNodesPool)
 	{
 		node->Clear();
@@ -67,8 +83,10 @@ void KDTree::Destroy()
 	}
 
 	mNodesPool.clear();
-	mUseNode.clear();
+#endif
+
 	mAvailableNodeNumber.clear();
+	mUseNode.clear();
 }
 
 std::vector<Actor*> KDTree::Search(Attack& InAttack)
@@ -84,7 +102,11 @@ std::vector<Actor*> KDTree::Search(Attack& InAttack)
 	vector<Actor*> overlap;
 	for (int64 nodeId : nodes)
 	{
+#if USE_MEMORY_POOL
 		Actor* actor = mNodesPool[nodeId]->GetActor();
+#else
+		Actor* actor = mNodesPool[nodeId]->GetActor();
+#endif
 		//SATResult result = SAT::CheckCollision(*actor->GetShape(), *InAttack.GetShape());
 		//if (result.colliding)
 		//{
@@ -137,8 +159,9 @@ std::vector<Actor*> KDTree::AllSearch()
 #else
 			if (Detection::CheckCollision(A, B))
 			{
-				overlap.push_back(A);
+				//overlap.push_back(A);
 				A->EnterOverlap();
+				B->EnterOverlap();
 			}
 #endif
 		}

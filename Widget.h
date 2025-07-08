@@ -24,13 +24,13 @@ public:
 public:
 	void SetFont(const std::string& InTTFPath);
 
-	void UpdateEventTime(const int64& InTime);
-	void UpdateTickTime(const int64& InTime);
-	void UpdateDrawTime(const int64& InTime);
+	void UpdateEventTime(const double InTime);
+	void UpdateTickTime(const double InTime);
+	void UpdateDrawTime(const double InTime);
 
-	void UpdateObjectCount(const int64& InCount);
-	void UpdateBuildTime(const int64& InTime);
-	void UpdateSearchTime(const int64& InTime);
+	void UpdateObjectCount(const double InCount);
+	void UpdateBuildTime(const double InTime);
+	void UpdateSearchTime(const double InTime);
 
 private:
 	sf::Font mFont;

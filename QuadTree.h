@@ -1,154 +1,106 @@
 #pragma once
 
-class LQuadtree;
+struct Bounds {
+    sf::Vector2f center;
+    sf::Vector2f size;
 
-enum LQNodeIndex : int
-{
-    UPPERLEFT = 0,  // Completely contained in the upper left quadrant
-    UPPERRIGHT,     // Completely contained in the upper right quadrant
-    LOWERRIGHT,     // Completely contained in the lower right quadrant
-    LOWERLEFT,      // Completely contained in the lower left quadrant
-    STRADDLING,     // Straddling the boundary
-    OUTOFAREA       // Out of area (input error)
+    Bounds() : center(), size() {}
+    Bounds(const  sf::Vector2f& center, const  sf::Vector2f& size) : center(center), size(size) {}
+
+    sf::Vector2f min() const 
+    {
+        return  sf::Vector2f(center.x - size.x * 0.5f, center.y - size.y * 0.5f);
+    }
+
+    sf::Vector2f max() const 
+    {
+        return  sf::Vector2f(center.x + size.x * 0.5f, center.y + size.y * 0.5f);
+    }
+
+    sf::Vector2f extents() const {
+        return size * 0.5f;
+    }
+
+    bool Intersects(const Bounds& other) const 
+    {
+        return !(min().x > other.max().x || max().x < other.min().x || min().y > other.max().y || max().y < other.min().y);
+    }
 };
 
-class LQNode : public std::enable_shared_from_this<LQNode>
+class Quadtree;
+
+enum class QNodeIndex : int 
+{
+    UPPERLEFT = 0,
+    UPPERRIGHT,
+    LOWERRIGHT,
+    LOWERLEFT,
+    STRADDLING,
+    OUTOFAREA
+};
+
+class QNode 
 {
 public:
-    LQNode(LQuadtree* tree, std::shared_ptr<LQNode> parent, const sf::Rect<float>& bounds, int depth);
+    QNode(Quadtree* tree, QNode* parent, const Bounds& bounds, int depth);
 
-    std::vector<std::shared_ptr<LQNode>> _children;
-    std::vector<Actor*> _items;
-    int _depth = 0;
+    void Insert(Actor* item);
+    QNodeIndex TestRegion(const Bounds& bounds);
+    void Query(Actor* item, std::vector<QNode*>& possibleNodes);
+    void Clear();
+    void CollectAllNodes(std::unordered_map<int, std::vector<QNode*>>& allNodes);
+    void DrawBounds(sf::VertexArray& OutVertexArray);
 
-    LQuadtree* _tree;
-    std::weak_ptr<LQNode> _parent;
-    sf::Rect<float> _bounds;
-    sf::Rect<float> _qbounds;
+    std::vector<std::unique_ptr<QNode>> children;
+    std::vector<Actor*> items;
+    int depth;
+    Bounds bounds;
 
-    /**
-     * Insert an item at the specified depth
-     */
-    void InsertAtDepth(Actor* item, int targetDepth);
-
-    void RemoveAtDepth(Actor* item, int targetDepth);
-
-    /**
-     * Query the node for items that potentially intersect with the query item
-     */
-    void Query(Actor* item, std::vector<std::shared_ptr<LQNode>>& possibleNodes);
-
-    /**
-     * Get quadrants that intersect with the given bounds
-     */
-    std::vector<std::shared_ptr<LQNode>> GetQuads(const sf::Rect<float>& bounds);
-
-    /**
-     * Test which region the bounds belong to
-     */
-    LQNodeIndex TestRegion(const sf::Rect<float>& bounds);
-
-    /**
-     * Split the node into four children
-     */
+private:
+    std::vector<QNodeIndex> GetQuads(const Bounds& Rect);
     bool Split();
-
-    void Merge();
-
-    /**
-     * Clear all items and children
-     */
-    void Clear();
-
-    /**
-     * Collect all nodes by depth
-     */
-    void CollectAllNodes(std::unordered_map<int, std::vector<std::shared_ptr<LQNode>>>& allNodes);
-
-    /**
-     * Draw the bounds of the node (for debugging)
-     */
-    void DrawBounds(sf::VertexArray& OutVertexArray);
-
-    /**
-     * Check if the node is split
-     */
     bool IsSplitted() const;
+
+    Quadtree* tree;
+    QNode* parent;
 };
 
-class LQuadtree
+class Quadtree 
 {
 public:
-    std::shared_ptr<LQNode> _rootNode;
-    int _maxDepth = 5;
-    float _constantK = 4.0f;
+    Quadtree(const sf::Vector2f& size);
 
-    /**
-     * Create root node
-     * @param size Bounding volume size
-     */
-    LQuadtree(const sf::Vector2f& size);
-
-    /**
-     * Calculate the target depth for insertion
-     */
-    int GetTargetDepth(Actor* item);
-
-    /**
-     * Insert an item into the quadtree
-     */
     void Insert(Actor* insertItem);
-
-    void Remove(Actor* removeItem);
-
-    /**
-     * Query the quadtree for items that potentially intersect with the query item
-     */
-    std::vector<Actor*> Query(Actor* queryItem, std::vector<std::shared_ptr<LQNode>>& possibleNodes);
-
-    /**
-     * Clear all allocated nodes
-     */
+    std::vector<Actor*> Query(Actor* queryItem, std::vector<QNode*>& possibleNodes);
     void Clear();
-
-    /**
-     * Get all nodes by depth
-     */
-    std::unordered_map<int, std::vector<std::shared_ptr<LQNode>>> GetAllNodes();
-
-    /**
-     * Draw the bounds of the quadtree (for debugging)
-     */
+    std::unordered_map<int, std::vector<QNode*>> GetAllNodes();
     void DrawBounds(sf::VertexArray& OutVertexArray);
+
+    int GetMaxDepth() const { return maxDepth; }
+
+private:
+    std::unique_ptr<QNode> rootNode;
+    int maxDepth = 5;
 };
 
-class QuadTree : public ICollisionSystem
+class QuadtreeManager : public ICollisionSystem 
 {
 public:
-	QuadTree(const sf::Vector2f& InArea);
-	~QuadTree();
+    QuadtreeManager(sf::Vector2f TotalArea);
+    ~QuadtreeManager();
+
+    virtual void Init() override;
+    virtual void Build(std::vector<Actor*>& InActors) override;
+    virtual void Destroy() override;
+    virtual std::vector<Actor*> Search(Attack& InAttack) override;
+    virtual std::vector<Actor*> AllSearch() override;
+    virtual void Draw(sf::RenderWindow* InWindow) override;
+    virtual void Draw(sf::VertexArray& OutVertexArray) override;
 
 private:
-	QuadTree(const QuadTree&) = delete;
-	QuadTree(QuadTree&&) = delete;
+    sf::Vector2f totalArea;
+    std::unique_ptr<Quadtree> tree;
 
-	QuadTree& operator=(const QuadTree&) = delete;
-	QuadTree& operator=(QuadTree&&) = delete;
-
-public:	//ISearch
-	virtual void Init() override;
-	virtual void Build(std::vector<Actor*>& InActors) override;
-	virtual void Destroy() override;
-	virtual std::vector<Actor*> Search(Attack& InAttack) override;
-	virtual std::vector<Actor*> AllSearch() override;
-	virtual void Draw(sf::RenderWindow* InWindow) override;
-	virtual void Draw(sf::VertexArray& OutVertexArray) override;
-
-public:
-    sf::Vector2f _totalArea = sf::Vector2f(64.0f, 64.0f);
-    std::unique_ptr<LQuadtree> _tree = nullptr;
-
-private:
-    std::vector<Actor*> _insertObjects;
-    std::vector<std::shared_ptr<LQNode>> _possibleNodes;
+    int iIndex = 0;
+    std::vector<Actor*> insertObjects;
 };

@@ -30,18 +30,18 @@ std::vector<Actor*> Array::Search(Attack& InAttack)
 
 		const EShapeType& type = actor->GetShapeType();
 
+#if USE_SAT
 		SATResult result = SAT::CheckCollision(*actor->GetShape(), *InAttack.GetShape());
 		if (result.colliding)
 		{
-			overlap.push_back(actor);
 			actor->EnterOverlap();
 		}
-
-		//if (Detection::CheckCollision(actor, &InAttack))
-		//{
-		//	overlap.push_back(actor);
-		//	actor->EnterOverlap();
-		//}
+#else
+		if (Detection::CheckCollision(actor, &InAttack))
+		{
+			actor->EnterOverlap();
+		}
+#endif
 	}
 	return overlap;
 }
@@ -51,26 +51,23 @@ std::vector<Actor*> Array::AllSearch()
 	std::vector<Actor*> overlap;
 	for (size_t i = 0; i < mActors.size(); i++)
 	{
-		Actor* A = mActors[i];
+		Actor* actor = mActors[i];
 		for (size_t j = i + 1; j < mActors.size(); j++)
 		{
-			Actor* B = mActors[j];
+			Actor* otherActor = mActors[j];
+
 #if USE_SAT
-			const float& distanceSquared = powf(A->GetLocation().x - B->GetLocation().x, 2) + powf(A->GetLocation().y - B->GetLocation().y, 2);
-			const float radiusSum = powf(A->GetLocalRadius() + B->GetLocalRadius(), 2);
-			if (distanceSquared <= radiusSum)
+			SATResult result = SAT::CheckCollision(*actor->GetShape(), *otherActor->GetShape());
+			if (result.colliding)
 			{
-				SATResult result = SAT::CheckCollision(*A->GetShape(), *B->GetShape());
-				if (result.colliding)
-				{
-					A->EnterOverlap();
-					B->EnterOverlap();
-				}
+				actor->EnterOverlap();
+				otherActor->EnterOverlap();
 			}
 #else
-			if (Detection::CheckCollision(A, B))
+			if (Detection::CheckCollision(actor, otherActor))
 			{
-				A->EnterOverlap();
+				actor->EnterOverlap();
+				otherActor->EnterOverlap();
 			}
 #endif
 		}
