@@ -1,9 +1,9 @@
 # CollisionDetection
 
-CollisionDetection은 Array, KD-Tree, QuadTree에 대한 일부 충돌 검사에 대한 결과입니다.
-테스트 환경 자체가 넓게 분산된 예제이기 때문에 상황에 따라 다를 수 있습니다.
+CollisionDetection은 Array, KD-Tree, QuadTree에 대한 일부 충돌 검사에 대한 결과입니다. </br>
+테스트 환경 자체가 넓게 분산된 예제이기 때문에 상황에 따라 다를 수 있습니다. </br>
 
-주의 : QuadTree는 이득우 강사님의 QuadTree를 C++로 변환한 것입니다.
+주의 : QuadTree는 이득우 강사님의 QuadTree를 C++로 변환한 것입니다. </br>
 
 # 📋 목차
 - [문제 상황](#문제-상황)
