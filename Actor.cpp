@@ -1,10 +1,8 @@
 #include "pch.h"
 #include "Actor.h"
 
-Actor::Actor(const int64& InActorId, CollisionConfig* InOuter, const EShapeType& InShapeType) : mActorId(InActorId), mOuter(InOuter), mShapeType(InShapeType), mShape(nullptr), mGoalLocation()
+Actor::Actor(const int64& InActorId, CollisionConfig* InOuter, const EShapeType& InShapeType) : mActorId(InActorId), mOuter(InOuter), mShapeType(InShapeType), mShape(nullptr), mGoalLocation(), mIsOverlap(false)
 {
-	SetNewGoal();
-
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<> dis(10, 50);
@@ -57,26 +55,33 @@ void Actor::SetColor(const sf::Color& InColor)
 void Actor::EnterOverlap()
 {
 	SetColor(sf::Color::Red);
+	mIsOverlap = true;
 }
 
 void Actor::LeaveOverlap()
 {
 	SetColor(sf::Color::Green);
+	mIsOverlap = false;
 }
 
 void Actor::SetNewGoal()
 {
+	if (mShape == nullptr) return;
+
+	sf::Vector2f location = this->GetLocation();
 	sf::Vector2f windowSize = mOuter->GetWindowSize();
+
+	const float moveRange = 100.0f;
 
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> disx(0, static_cast<int>(windowSize.x) - 100);
-	std::uniform_int_distribution<> disy(0, static_cast<int>(windowSize.y) - 100);
+	std::uniform_real_distribution<float> distX(-moveRange, moveRange);
+	std::uniform_real_distribution<float> distY(-moveRange, moveRange);
 
-	const float x = static_cast<float>(disx(gen)) + 50.0f;
-	const float y = static_cast<float>(disy(gen)) + 50.0f;
+	float newX = std::clamp(location.x + distX(gen), 0.0f, windowSize.x);
+	float newY = std::clamp(location.y + distY(gen), 0.0f, windowSize.y);
 
-	mGoalLocation = { x, y };
+	mGoalLocation = { newX, newY };
 }
 
 CircleActor::CircleActor(const int64& InActorId, CollisionConfig* InOuter, const float& InRadius, const sf::Vector2f& InLocation) : Actor(InActorId, InOuter, EShapeType::Circle), mRadius(InRadius)
@@ -89,7 +94,9 @@ CircleActor::CircleActor(const int64& InActorId, CollisionConfig* InOuter, const
 	circle->setOrigin(circle->getGeometricCenter());
 	circle->setFillColor(sf::Color::Black);
 	circle->setOutlineColor(sf::Color::Green);
-	circle->setOutlineThickness(-1.0f);
+	circle->setOutlineThickness(-2.0f);
+
+	SetNewGoal();
 }
 
 CircleActor::~CircleActor()
@@ -137,7 +144,10 @@ void CircleActor::VertexRender(sf::VertexArray& InVertex)
 
 sf::Rect<float> CircleActor::GetLocalBound()
 {
-	return sf::Rect<float>(mShape->getPosition(), { mRadius, mRadius });
+	sf::CircleShape* circle = reinterpret_cast<sf::CircleShape*>(mShape);
+	sf::Rect<float> rect = circle->getGlobalBounds();
+	//rect.position = GetLocation();
+	return rect;
 }
 
 BoxActor::BoxActor(const int64& InActorId, CollisionConfig* InOuter, const float& InSize, const sf::Vector2f& InLocation) : Actor(InActorId, InOuter, EShapeType::Box), mSize(InSize)
@@ -150,7 +160,9 @@ BoxActor::BoxActor(const int64& InActorId, CollisionConfig* InOuter, const float
 	rectangle->setOrigin(rectangle->getGeometricCenter());
 	rectangle->setFillColor(sf::Color::Black);
 	rectangle->setOutlineColor(sf::Color::Green);
-	rectangle->setOutlineThickness(-1.0f);
+	rectangle->setOutlineThickness(-2.0f);
+
+	SetNewGoal();
 }
 
 BoxActor::~BoxActor()
@@ -205,7 +217,10 @@ float BoxActor::GetLocalRadius() const
 
 sf::Rect<float> BoxActor::GetLocalBound()
 {
-	return sf::Rect<float>(mShape->getPosition() + sf::Vector2f(mSize / 2.0f, mSize / 2.0f), {mSize / 2.0f, mSize / 2.0f});
+	sf::RectangleShape* rectangle = reinterpret_cast<sf::RectangleShape*>(mShape);
+	sf::Rect<float> rect = rectangle->getGlobalBounds();
+	//rect.position = GetLocation() - rect.size * 0.5f;
+	return rect;
 }
 
 sf::Vector2f BoxActor::GetCenter() const

@@ -3,7 +3,7 @@
 #include <set>
 #include <map>
 
-Array::Array(std::vector<Actor*>& InActors) : mActors(InActors)
+Array::Array() : mActors()
 {
 }
 
@@ -11,13 +11,32 @@ void Array::Init()
 {
 }
 
-void Array::Build(std::vector<Actor*>& InActors)
-{
-	
-}
-
 void Array::Destroy()
 {
+	mActors.clear();
+}
+
+void Array::Insert(Actor* Actor)
+{
+	mActors.emplace_back(Actor);
+}
+
+void Array::Remove(Actor* Actor)
+{
+	for (size_t index = 0; index < mActors.size(); ++index)
+	{
+		if (mActors[index] == Actor)
+		{
+			mActors[index] = mActors.back();
+			mActors.pop_back();
+			break;
+		}
+	}
+}
+
+void Array::Build()
+{
+
 }
 
 std::vector<Actor*> Array::Search(Attack& InAttack)
@@ -25,10 +44,6 @@ std::vector<Actor*> Array::Search(Attack& InAttack)
 	std::vector<Actor*> overlap;
 	for (Actor* actor : mActors)
 	{
-		const sf::Vector2f& location = actor->GetLocation();
-		const float& radius = actor->GetLocalRadius();
-
-		const EShapeType& type = actor->GetShapeType();
 
 #if USE_SAT
 		SATResult result = SAT::CheckCollision(*actor->GetShape(), *InAttack.GetShape());
@@ -39,6 +54,7 @@ std::vector<Actor*> Array::Search(Attack& InAttack)
 #else
 		if (Detection::CheckCollision(actor, &InAttack))
 		{
+			overlap.push_back(actor);
 			actor->EnterOverlap();
 		}
 #endif
@@ -56,6 +72,8 @@ std::vector<Actor*> Array::AllSearch()
 		{
 			Actor* otherActor = mActors[j];
 
+			if (actor == otherActor) continue;
+
 #if USE_SAT
 			SATResult result = SAT::CheckCollision(*actor->GetShape(), *otherActor->GetShape());
 			if (result.colliding)
@@ -66,19 +84,11 @@ std::vector<Actor*> Array::AllSearch()
 #else
 			if (Detection::CheckCollision(actor, otherActor))
 			{
+				overlap.push_back(actor);
 				actor->EnterOverlap();
-				otherActor->EnterOverlap();
 			}
 #endif
 		}
 	}
 	return overlap;
-}
-
-void Array::Draw(sf::RenderWindow* InWindow)
-{
-}
-
-void Array::Draw(sf::VertexArray& OutVertexArray)
-{
 }

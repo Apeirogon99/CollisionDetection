@@ -11,13 +11,13 @@ CollisionConfig::CollisionConfig(const uint32& InMaxObject, const ESearchType& I
     switch (InSearchType)
     {
     case ESearchType::ARRAY:
-        mCollisionSystem = new Array(mActors);
+        mCollisionSystem = new Array();
         break;
     case ESearchType::KD_TREE:
-        mCollisionSystem = new KDTree(InMaxObject);
+        mCollisionSystem = new KDTree();
         break;
     case ESearchType::QUAD_TREE:
-        mCollisionSystem = new QuadtreeManager({ WINDOW_WIDTH, WINDOW_HEIGHT });
+        mCollisionSystem = new QuadtreeManager();
         break;
     default:
         break;
@@ -37,7 +37,9 @@ CollisionConfig::~CollisionConfig()
 void CollisionConfig::Run()
 {
     double searchTime[100] = { 0, };
+    double buildTime[100] = { 0, };
     int64 searchTimeCount = 0;
+    int64 buildTimeCount = 0;
     while (mWindow->isOpen())
     {
 
@@ -60,11 +62,13 @@ void CollisionConfig::Run()
 
                     if (const auto* keyReleased = event->getIf<sf::Event::KeyReleased>())
                     {
+                        // 객체 수 증가
                         if (keyReleased->scancode == sf::Keyboard::Scancode::Num1)
                         {
                             SpawnActor(mSpawnCount);
                         }
 
+                        // 객체 수 감소
                         if (keyReleased->scancode == sf::Keyboard::Scancode::Num2)
                         {
                             DestroyActor(mSpawnCount);
@@ -73,6 +77,17 @@ void CollisionConfig::Run()
                         if (keyReleased->scancode == sf::Keyboard::Scancode::Num3)
                         {
                             mIsDebug = !mIsDebug;
+                        }
+
+                        // 공격 범위
+                        if (keyReleased->scancode == sf::Keyboard::Scancode::Q)
+                        {
+                            mAttack.AddAttackRange(10);
+                        }
+
+                        if (keyReleased->scancode == sf::Keyboard::Scancode::W)
+                        {
+                            mAttack.AddAttackRange(-10);
                         }
                     }
 
@@ -97,9 +112,18 @@ void CollisionConfig::Run()
 
         auto build = [&]()
             {
-                mCollisionSystem->Build(mActors);
+                mCollisionSystem->Build();
             };
-        mWidget->UpdateBuildTime(mTaskTimer.MeasureTask(build));
+        buildTime[buildTimeCount] = mTaskTimer.MeasureTask(build);
+        buildTimeCount = (buildTimeCount + 1) % 100;
+        {
+            double sum = 0;
+            for (size_t i = 0; i < 100; ++i)
+            {
+                sum += buildTime[i];
+            }
+            mWidget->UpdateBuildTime(sum / 100);
+        }
 
         auto search = [&]()
             {
@@ -109,24 +133,27 @@ void CollisionConfig::Run()
                 }
                 else
                 {
-                    mCollisionSystem->AllSearch();
+                    // 전체 충돌
+                    //mCollisionSystem->AllSearch();
                 }
             };
         searchTime[searchTimeCount] = mTaskTimer.MeasureTask(search);
         searchTimeCount = (searchTimeCount + 1) % 100;
 
-        double sum = 0;
-        for (size_t i = 0; i < 100; ++i)
         {
-            sum += searchTime[i];
+            double sum = 0;
+            for (size_t i = 0; i < 100; ++i)
+            {
+                sum += searchTime[i];
+            }
+            mWidget->UpdateSearchTime(sum / 100);
         }
-        mWidget->UpdateSearchTime(sum / 100);
        
 
         //DRAW
         auto draw = [&]()
             {
-                mWindow->clear();
+                mWindow->clear(sf::Color::Black);
 
                 sf::VertexArray debugVertexArray(sf::PrimitiveType::Lines);
                 if (mIsDebug)
@@ -176,27 +203,31 @@ void CollisionConfig::SpawnActor(const uint32& InAddObjectCount)
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> disx(50, WINDOW_WIDTH - 100);
-    std::uniform_int_distribution<> disy(50, WINDOW_HEIGHT - 100);
+    std::uniform_int_distribution<> disx(0, WINDOW_WIDTH);
+    std::uniform_int_distribution<> disy(0, WINDOW_HEIGHT);
 
     for (uint32 count = 0; count < InAddObjectCount / 2.0f; ++count)
     {
-        const float size = 4.0f;
+        const float size = 1.0f;
         const float x = static_cast<float>(disx(gen));
         const float y = static_cast<float>(disy(gen));
 
         Actor* actor = new CircleActor(mCurObject++, this, size, {x, y});
         mActors.push_back(actor);
+
+        mCollisionSystem->Insert(actor);
     }
 
     for (uint32 count = 0; count < InAddObjectCount / 2.0f; ++count)
     {
-        const float size = 8.0f;
+        const float size = 2.0f;
         const float x = static_cast<float>(disx(gen));
         const float y = static_cast<float>(disy(gen));
 
         Actor* actor = new BoxActor(mCurObject++, this, size, { x, y });
         mActors.push_back(actor);
+
+        mCollisionSystem->Insert(actor);
     }
 
     mWidget->UpdateObjectCount(mCurObject);
@@ -212,6 +243,8 @@ void CollisionConfig::DestroyActor(const uint32& InSubObjectCount)
     for (uint32 count = 0; count < InSubObjectCount; ++count)
     {
         Actor* actor = mActors[count];
+
+        mCollisionSystem->Remove(actor);
 
         delete actor;
         actor = nullptr;

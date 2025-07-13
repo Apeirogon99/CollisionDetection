@@ -2,7 +2,7 @@
 
 int main(void)
 {
-    CollisionConfig* config = new CollisionConfig(10000, ESearchType::KD_TREE, EThreadMode::SINGLE);
+    CollisionConfig* config = new CollisionConfig(100000, ESearchType::ARRAY, EThreadMode::SINGLE);
     config->Run();
 
     delete config;

@@ -2,7 +2,7 @@
 class Array : public ICollisionSystem
 {
 public:
-	Array(std::vector<Actor*>& InActors);
+	Array();
 	~Array() { }
 
 private:
@@ -15,13 +15,17 @@ private:
 
 public:	//ISearch
 	virtual void Init() override;
-	virtual void Build(std::vector<Actor*>& InActors) override;
 	virtual void Destroy() override;
+
+	virtual void Insert(Actor* Actor) override;
+	virtual void Remove(Actor* Actor) override;
+	virtual void Build() override;
+
 	virtual std::vector<Actor*> Search(Attack& InAttack) override;
 	virtual std::vector<Actor*> AllSearch() override;
-	virtual void Draw(sf::RenderWindow* InWindow) override;
-	virtual void Draw(sf::VertexArray& OutVertexArray) override;
+
+	virtual void Draw(sf::VertexArray& OutVertexArray) override { /* DEBUG 내용 없음 */ }
 
 private:
-	std::vector<Actor*>& mActors;
+	std::vector<Actor*> mActors;
 };

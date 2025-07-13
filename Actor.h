@@ -29,7 +29,8 @@ public:
 	sf::Shape* GetShape() const { return mShape; }
 	virtual float GetLocalRadius() const { return 0.0f; }
 	virtual sf::Rect<float> GetLocalBound() { return sf::Rect<float>(); }
-	const sf::Vector2f GetLocation() const { return mShape->getPosition(); }
+	const sf::Vector2f& GetLocation() const { return mShape->getPosition(); }
+	bool IsOverlap() const { return mIsOverlap; }
 
 protected:
 	void SetNewGoal();
@@ -43,6 +44,7 @@ protected:
 	sf::Vector2f mGoalLocation;
 
 	float mSpeed;
+	bool mIsOverlap;
 };
 
 class CircleActor : public Actor
@@ -74,6 +76,6 @@ public:
 	sf::Vector2f GetCenter() const;
 	sf::Vector2f GetPoint(const int32& InIndex) const;
 
-private:
+protected:
 	float mSize;
 };

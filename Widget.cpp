@@ -79,7 +79,7 @@ void Widget::SetFont(const std::string& InTTFPath)
 void Widget::UpdateEventTime(const double InTime)
 {
     std::stringstream stream;
-    stream << std::fixed << std::setprecision(1);
+    stream << std::fixed << std::setprecision(2);
     stream << "Event Time: " << InTime << "ms";
     mTexts[static_cast<size_t>(EWidgetType::Event)].setString(stream.str());
 }
@@ -87,7 +87,7 @@ void Widget::UpdateEventTime(const double InTime)
 void Widget::UpdateTickTime(const double InTime)
 {
     std::stringstream stream;
-    stream << std::fixed << std::setprecision(1);
+    stream << std::fixed << std::setprecision(2);
     stream << "Tick Time: " << InTime << "ms";
     mTexts[static_cast<size_t>(EWidgetType::Tick)].setString(stream.str());
 }
@@ -95,7 +95,7 @@ void Widget::UpdateTickTime(const double InTime)
 void Widget::UpdateDrawTime(const double InTime)
 {
     std::stringstream stream;
-    stream << std::fixed << std::setprecision(1);
+    stream << std::fixed << std::setprecision(2);
     stream << "Draw Time: " << InTime << "ms";
     mTexts[static_cast<size_t>(EWidgetType::Draw)].setString(stream.str());
 }
@@ -103,7 +103,7 @@ void Widget::UpdateDrawTime(const double InTime)
 void Widget::UpdateObjectCount(const double InCount)
 {
     std::stringstream stream;
-    stream << std::fixed << std::setprecision(1);
+    stream << std::fixed << std::setprecision(2);
     stream << "Object Count: " << InCount;
     mTexts[static_cast<size_t>(EWidgetType::ObjectCount)].setString(stream.str());
 }
@@ -111,7 +111,7 @@ void Widget::UpdateObjectCount(const double InCount)
 void Widget::UpdateBuildTime(const double InTime)
 {
     std::stringstream stream;
-    stream << std::fixed << std::setprecision(1);
+    stream << std::fixed << std::setprecision(2);
     stream << "Build Time: " << InTime << "ms";
     mTexts[static_cast<size_t>(EWidgetType::BuildTime)].setString(stream.str());
 }
@@ -119,7 +119,7 @@ void Widget::UpdateBuildTime(const double InTime)
 void Widget::UpdateSearchTime(const double InTime)
 {
     std::stringstream stream;
-    stream << std::fixed << std::setprecision(1);
+    stream << std::fixed << std::setprecision(2);
     stream << "Search Time: " << InTime << "ms";
     mTexts[static_cast<size_t>(EWidgetType::SearchTime)].setString(stream.str());
 }

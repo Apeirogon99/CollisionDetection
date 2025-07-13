@@ -14,6 +14,7 @@ private:
 
 public:
 	void SetAttackLocation(const sf::Vector2i& InLocation);
+	void AddAttackRange(const float InRange);
 	void SetAttackCircumscriber(sf::VertexArray& InVertex);
 };
 

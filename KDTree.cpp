@@ -1,28 +1,8 @@
 #include "pch.h"
 #include "KDTree.h"
 
-KDTree::KDTree(const uint32& inPoolSize)
+KDTree::KDTree() : mRoot(nullptr), mActors()
 {
-
-	if (inPoolSize > UINT32_MAX)
-	{
-		wprintf(L"[KD-Tree] [Init] It's too big to make\n");
-		return;
-	}
-
-	uint32 newPoolsize = inPoolSize;
-	if (!((inPoolSize & (inPoolSize - 1)) == 0))
-	{
-		newPoolsize = static_cast<uint32>(pow(2, floor(log2(inPoolSize)) + 1));
-	}
-
-	for (uint32 index = 0; index < newPoolsize; ++index)
-	{
-#if USE_MEMORY_POOL
-		mNodesPool.push_back(new KDNode(index));
-#endif
-		mAvailableNodeNumber.push_back(index);
-	}
 }
 
 KDTree::~KDTree()
@@ -34,91 +14,74 @@ void KDTree::Init()
 {
 }
 
-void KDTree::Build(std::vector<Actor*>& InActors)
+void KDTree::Destroy()
 {
-	//기존 정보 삭제
-	if (mUseNode.size() != 0)
+	if (mRoot)
 	{
-		DeleteNode(mUseNode[0]);
+		DeleteNode(mRoot);
 	}
 
-	for (Actor* actor : InActors)
+	mActors.clear();
+}
+
+void KDTree::Insert(Actor* Actor)
+{
+	mActors.emplace_back(Actor);
+}
+
+void KDTree::Remove(Actor* Actor)
+{
+	for (size_t index = 0; index < mActors.size(); ++index)
 	{
-#if USE_MEMORY_POOL
-		KDNode* nextNode = NextAvailableNode();
-		if (nextNode == nullptr)
+		if (mActors[index] == Actor)
 		{
-			return;
+			mActors[index] = mActors.back();
+			mActors.pop_back();
+			break;
 		}
-		nextNode->InitNode(actor);
-#else
-		const uint16 nextNumber = mAvailableNodeNumber.front();
-		mAvailableNodeNumber.pop_front();
-
-		KDNode* nextNode = new KDNode(nextNumber);
-		if (nextNode == nullptr)
-		{
-			return;
-		}
-		nextNode->InitNode(actor);
-#endif
-
-		if (mUseNode.size() != 0)
-		{
-			InsertNode(mUseNode[0], nextNode, INIT_DEPTH);
-		}
-		mUseNode.push_back(nextNode);
 	}
 }
 
-void KDTree::Destroy()
+void KDTree::Build()
 {
-#if USE_MEMORY_POOL
-	for (KDNode* node : mNodesPool)
+	//기존 정보 삭제 (지속적인 이동을 가지기 때문)
+	if (mRoot)
 	{
-		node->Clear();
-
-		delete node;
-		node = nullptr;
+		DeleteNode(mRoot);
 	}
 
-	mNodesPool.clear();
-#endif
-
-	mAvailableNodeNumber.clear();
-	mUseNode.clear();
+	if (mActors.size() != 0)
+	{
+		mRoot = InsertNode(mActors, INIT_DEPTH);
+	}
 }
 
 std::vector<Actor*> KDTree::Search(Attack& InAttack)
 {
-	if (mUseNode.size() == 0)
-	{
-		return vector<Actor*>();
-	}
-
-	std::vector<int64> nodes;
-	SearchNode(InAttack.GetLocation(), InAttack.GetLocalRadius(), mUseNode[0], nodes, INIT_DEPTH);
-
 	vector<Actor*> overlap;
-	for (int64 nodeId : nodes)
-	{
-#if USE_MEMORY_POOL
-		Actor* actor = mNodesPool[nodeId]->GetActor();
-#else
-		Actor* actor = mNodesPool[nodeId]->GetActor();
-#endif
-		//SATResult result = SAT::CheckCollision(*actor->GetShape(), *InAttack.GetShape());
-		//if (result.colliding)
-		//{
-		//	overlap.push_back(actor);
-		//	actor->EnterOverlap();
-		//}
+	if (mRoot == nullptr) return overlap;
 
-		if (Detection::CheckCollision(actor, &InAttack))
+	std::vector<KDNode*> possilbeNode;
+	RangeSearch(InAttack.GetLocation(), InAttack.GetLocalRadius(), mRoot, possilbeNode, INIT_DEPTH);
+
+	for (const auto& otherNode : possilbeNode)
+	{
+		Actor* otherActor = otherNode->GetActor();
+
+#if USE_SAT
+		SATResult result = SAT::CheckCollision(*A->GetShape(), *B->GetShape());
+		if (result.colliding)
 		{
-			overlap.push_back(actor);
-			actor->EnterOverlap();
+			overlap.emplace_back(otherActor);
+			otherActor->EnterOverlap();
 		}
+#else
+		if (Detection::CheckCollision(&InAttack, otherActor))
+		{
+			overlap.emplace_back(otherActor);
+			otherActor->EnterOverlap();
+		}
+#endif
 	}
 
 	return overlap;
@@ -126,289 +89,126 @@ std::vector<Actor*> KDTree::Search(Attack& InAttack)
 
 std::vector<Actor*> KDTree::AllSearch()
 {
-	if (mUseNode.size() == 0)
-	{
-		return vector<Actor*>();
-	}
-
 	vector<Actor*> overlap;
-	for (KDNode* node : mUseNode)
+	if (mRoot == nullptr) return overlap;
+
+	for (auto iter = mActors.begin(); iter != mActors.end(); ++iter)
 	{
-		Actor* A = node->GetActor();
+		Actor* actor = *iter;
+		std::vector<KDNode*> possilbeNode;
+		RangeSearch(actor->GetLocation(), actor->GetLocalRadius(), mRoot, possilbeNode, INIT_DEPTH);
 
-		std::vector<int64> nodeIds;
-		SearchNode(A->GetLocation(), A->GetLocalRadius(), mUseNode[0], nodeIds, INIT_DEPTH);
-
-		if (nodeIds.size() <= 1)
+		for (const auto& otherNode : possilbeNode)
 		{
-			continue;
-		}
-
-		for (const int64& id : nodeIds)
-		{
-			if (node->GetNodeNumber() == id) continue;
-			Actor* B = mNodesPool[id]->GetActor();
+			Actor* otherActor = otherNode->GetActor();
+			if (actor == otherActor) continue;
 
 #if USE_SAT
 			SATResult result = SAT::CheckCollision(*A->GetShape(), *B->GetShape());
 			if (result.colliding)
 			{
-				overlap.push_back(A);
-				A->EnterOverlap();
+				overlap.emplace_back(actor);
+				actor->EnterOverlap();
 			}
 #else
-			if (Detection::CheckCollision(A, B))
+			if (Detection::CheckCollision(actor, otherActor))
 			{
-				//overlap.push_back(A);
-				A->EnterOverlap();
-				B->EnterOverlap();
+				overlap.emplace_back(actor);
+				actor->EnterOverlap();
 			}
 #endif
 		}
 	}
 
-
 	return overlap;
-}
-
-void KDTree::Draw(sf::RenderWindow* InWindow)
-{
-	if (mUseNode.size() != 0)
-	{
-		sf::Vector2u windowSize = InWindow->getSize();
-		const float windowX = static_cast<float>(WINDOW_WIDTH);
-		const float windowY = static_cast<float>(WINDOW_HEIGHT);
-
-		DrawNode(InWindow, mUseNode[0], 0.0f, windowX, 0.0f, windowY);
-	}
 }
 
 void KDTree::Draw(sf::VertexArray& OutVertexArray)
 {
-	if (mUseNode.size() != 0)
+	if (mRoot)
 	{
 		const float windowX = static_cast<float>(WINDOW_WIDTH);
 		const float windowY = static_cast<float>(WINDOW_HEIGHT);
 
-		DrawNode(OutVertexArray, mUseNode[0], 0.0f, windowX, 0.0f, windowY);
+		DrawNode(OutVertexArray, mRoot, 0.0f, windowX, 0.0f, windowY);
 	}
 }
 
-void KDTree::InsertNode(KDNode* inParentNode, KDNode* inNode, const uint16& inDepth)
+KDNode* KDTree::InsertNode(std::vector<Actor*> inActors, const uint16 inDepth)
 {
-	const uint32 nextAxis = (inDepth + KD_TREE::INCREASE_DEPTH) % KD_TREE::MAX_DEPTH;
+	if (inActors.size() == 0) return nullptr;
 
-	const sf::Vector2f& parentLocation = inParentNode->GetActor()->GetLocation();
-	const sf::Vector2f& nodeLocation = inNode->GetActor()->GetLocation();
+	const uint16 depth = inDepth % KD_TREE::MAX_DEPTH;
 
-	bool result = CompareLocation(parentLocation, nodeLocation, inDepth);
-	if (result)
-	{
-		if (inParentNode->GetLeftNode() == nullptr) { inParentNode->SetLeftNode(inNode); inNode->SetDepth(nextAxis); }
-		else { InsertNode(inParentNode->GetLeftNode(), inNode, nextAxis); }
-	}
-	else
-	{
-		if (inParentNode->GetRightNode() == nullptr) { inParentNode->SetRightNode(inNode); inNode->SetDepth(nextAxis); }
-		else { InsertNode(inParentNode->GetRightNode(), inNode, nextAxis); }
-	}
-}
-
-void KDTree::InsertNode(KDNode* InParentNode, KDNode* InNode)
-{
-	std::deque<KDNode*> nodes;
-	std::unordered_set<uint32> visit;
-
-	InNode->SetParentNode(InParentNode);
-	nodes.push_back(InNode);
-
-	while (!nodes.empty())
-	{
-		KDNode* node = nodes.front(); nodes.pop_front();
-		KDNode* parentNode = node->GetParentNode();
-
-		if (node == nullptr || !node->IsValid()) continue;
-
-		uint32 nodeId = node->GetNodeNumber();
-		if (visit.find(nodeId) != visit.end()) continue;
-		visit.insert(nodeId);
-
-		const sf::Vector2f& parentLocation = parentNode->GetActor()->GetLocation();
-		const sf::Vector2f& nodeLocation = node->GetActor()->GetLocation();
-	
-		uint32 curDepth = parentNode->GetDepth();
-		uint32 nextDepth = (curDepth + KD_TREE::INCREASE_DEPTH) % KD_TREE::MAX_DEPTH;
-		bool result = CompareLocation(parentLocation, nodeLocation, curDepth);
-		if (result)
+	// 현재 차원 기준으로 정렬
+	std::sort(inActors.begin(), inActors.end(),
+		[depth](const Actor* lhs, const Actor* rhs)
 		{
-			if (parentNode->GetLeftNode() == nullptr)
-			{ 
-				node->SetDepth(nextDepth);
-				node->SetParentNode(parentNode);
-				parentNode->SetLeftNode(node);
-			}
-			else 
-			{ 
-				if (parentNode->GetLeftNode() == node) continue;
+			const sf::Vector2f& lhsLocation = lhs->GetLocation();
+			const sf::Vector2f& rhsLocation = rhs->GetLocation();
+			return (KD_TREE::X == depth) ? (lhsLocation.x < rhsLocation.x) : (lhsLocation.y < rhsLocation.y);
+		});
 
+	// 중간 값 찾기
+	size_t middleIndex = inActors.size() / 2;
+	Actor* middleActor = inActors[middleIndex];
+	KDNode* node = new KDNode(middleActor, depth);
 
-				visit.erase(nodeId);
-				node->SetParentNode(parentNode->GetLeftNode());
-				nodes.push_back(node);
-			}
-		}
-		else
-		{
-			if (parentNode->GetRightNode() == nullptr)
-			{ 
-				node->SetDepth(nextDepth);
-				node->SetParentNode(parentNode);
-				parentNode->SetRightNode(node);
-			}
-			else 
-			{ 
-				if (parentNode->GetRightNode() == node) continue;
+	// 왼쪽 오른쪽 나누기
+	std::vector<Actor*> leftActors(inActors.begin(), inActors.begin() + middleIndex);
+	std::vector<Actor*> rightActors(inActors.begin() + middleIndex + 1, inActors.end());
 
-				visit.erase(nodeId);
-				node->SetParentNode(parentNode->GetRightNode());
-				nodes.push_back(node);
-			}
-		}
-	}
+	node->SetLeftNode(InsertNode(leftActors, depth + 1));
+	node->SetRightNode(InsertNode(rightActors, depth + 1));
+
+	return node;
 }
 
-void KDTree::DeleteNode(KDNode* InNode)
+void KDTree::DeleteNode(KDNode* inNode)
 {
-	std::deque<KDNode*> nodes;
-	nodes.push_back(InNode);
+	if (inNode == nullptr) return;
 
-	while (!nodes.empty())
-	{
-		KDNode* node = nodes.front(); nodes.pop_front();
+	DeleteNode(inNode->GetLeftNode());
+	DeleteNode(inNode->GetRightNode());
 
-		if (node == nullptr || !node->IsValid()) continue;
-
-		nodes.push_back(node->GetLeftNode());
-		nodes.push_back(node->GetRightNode());
-
-		mAvailableNodeNumber.push_back(node->GetNodeNumber());
-	}
-
-	for (KDNode* node : mUseNode)
-	{
-		node->Clear();
-	}
-	mUseNode.clear();
-
-	//DeleteNode(inNode->GetLeftNode());
-	//DeleteNode(inNode->GetRightNode());
+	delete inNode;
+	inNode = nullptr;
 }
 
-void KDTree::SearchNode(const sf::Vector2f& inFindLocation, const float& inRadius, KDNode* InNode, std::vector<int64>& OutNodes, const uint16& inDepth)
+void KDTree::RangeSearch(const sf::Vector2f& inFindLocation, const float& inRadius, KDNode* inNode, std::vector<KDNode*>& OutNodes, const uint16& inDepth)
 {
-	if (InNode == nullptr || !InNode->IsValid())
-		return;
-	InNode->SetDirty(true);
+	if (inNode == nullptr) return;
 
-	Actor* actor = InNode->GetActor();
+	Actor* actor = inNode->GetActor();
 	const sf::Vector2f& location = actor->GetLocation();
-	const float& radius = actor->GetLocalRadius();
+	const float& actorRadius = actor->GetLocalRadius();
 
-	const float& distanceSquared = powf(inFindLocation.x - location.x, 2) + powf(inFindLocation.y - location.y, 2);
-	const float radiusSum = powf(inRadius + radius, 2);
-	if (distanceSquared <= radiusSum)
+	const float distanceSquared = powf(inFindLocation.x - location.x, 2) + powf(inFindLocation.y - location.y, 2);
+	const float radiusSum = powf(inRadius + actorRadius, 2);
+
+	if (distanceSquared <= radiusSum) 
 	{
-		OutNodes.push_back(InNode->GetNodeNumber());
+		OutNodes.push_back(inNode);
 	}
 
-	uint32 nextDepth = (inDepth + KD_TREE::INCREASE_DEPTH) % KD_TREE::MAX_DEPTH;
-	if (inDepth == KD_TREE::X)
-	{
-		if (inFindLocation.x + inRadius > location.x) SearchNode(inFindLocation, inRadius, InNode->GetLeftNode(), OutNodes, nextDepth);
-		if (inFindLocation.x - inRadius < location.x) SearchNode(inFindLocation, inRadius, InNode->GetRightNode(), OutNodes, nextDepth);
+	// 현재 노드의 분할 차원 결정
+	const uint16 currentDimension = inDepth % KD_TREE::MAX_DEPTH;
+
+	if (currentDimension == KD_TREE::X) 
+	{ // X축 분할
+		if (inFindLocation.x - inRadius <= location.x) // 왼쪽 영역과 겹침
+			RangeSearch(inFindLocation, inRadius, inNode->GetLeftNode(), OutNodes, inDepth + 1);
+
+		if (inFindLocation.x + inRadius >= location.x) // 오른쪽 영역과 겹침
+			RangeSearch(inFindLocation, inRadius, inNode->GetRightNode(), OutNodes, inDepth + 1);
 	}
-	else //if (inDepth == KD_TREE::Y)
-	{
-		if (inFindLocation.y + inRadius > location.y) SearchNode(inFindLocation, inRadius, InNode->GetRightNode(), OutNodes, nextDepth);
-		if (inFindLocation.y - inRadius < location.y) SearchNode(inFindLocation, inRadius, InNode->GetLeftNode(), OutNodes, nextDepth);
-	}
-}
+	else 
+	{ // Y축 분할
+		if (inFindLocation.y - inRadius <= location.y) // 아래쪽 영역과 겹침
+			RangeSearch(inFindLocation, inRadius, inNode->GetLeftNode(), OutNodes, inDepth + 1);
 
-void KDTree::SearchNode(const sf::Vector2f& inFindLocation, const float& inRadius, KDNode* InNode, std::vector<int64>& OutNodes)
-{	
-	std::deque<KDNode*> nodes;
-	nodes.push_back(InNode);
-
-	while (!nodes.empty())
-	{
-		KDNode* node = nodes.front(); nodes.pop_front();
-
-		if (node == nullptr || !node->IsValid() || node->GetDirty()) continue;
-		node->SetDirty(true);
-
-		Actor* actor = node->GetActor();
-		const sf::Vector2f& location = actor->GetLocation();
-		const float& radius = actor->GetLocalRadius();
-	
-		const float& distanceSquared = powf(inFindLocation.x - location.x, 2) + powf(inFindLocation.y - location.y, 2);
-		const float radiusSum = powf(inRadius + radius, 2);
-		if (distanceSquared <= radiusSum)
-		{
-			OutNodes.push_back(node->GetNodeNumber());
-		}
-
-		//if (node->GetDepth() == KD_TREE::X)
-		//{
-		//	if (inFindLocation.x + inRadius > location.x) nodes.push_back(node->GetLeftNode());
-		//	if (inFindLocation.x - inRadius < location.x) nodes.push_back(node->GetRightNode());
-		//}
-		//else //if (inDepth == KD_TREE::Y)
-		//{
-		//	if (inFindLocation.y + inRadius > location.y) nodes.push_back(node->GetRightNode());
-		//	if (inFindLocation.y - inRadius < location.y) nodes.push_back(node->GetLeftNode());
-		//}
-	
-		nodes.push_back(node->GetLeftNode());
-		nodes.push_back(node->GetRightNode());
-	}
-}
-
-void KDTree::DrawNode(sf::RenderWindow* InWindow, KDNode* InNode, float xMin, float xMax, float yMin, float yMax)
-{
-	if (InNode == nullptr) return;
-
-	const sf::Vector2f& location = InNode->GetActor()->GetLocation();
-	const uint32 axis = InNode->GetDepth() % KD_TREE::MAX_DEPTH;
-
-	if (axis == KD_TREE::X)
-	{
-		sf::Vertex v1; v1.position = sf::Vector2f(location.x, yMin);
-		sf::Vertex v2; v2.position = sf::Vector2f(location.x, yMax);
-		sf::Vertex line[] =
-		{
-			v1,
-			v2
-		};
-
-		InWindow->draw(line, 2, sf::PrimitiveType::Lines);
-
-		DrawNode(InWindow, InNode->GetLeftNode(), location.x, xMax, yMin, yMax);
-		DrawNode(InWindow, InNode->GetRightNode(), xMin, location.x, yMin, yMax);
-	}
-	else if (axis == KD_TREE::Y)
-	{
-		sf::Vertex v1; v1.position = sf::Vector2f(xMin, location.y); v1.color;
-		sf::Vertex v2; v2.position = sf::Vector2f(xMax, location.y); v2.color;
-		sf::Vertex line[] =
-		{
-			v1,
-			v2
-		};
-
-		InWindow->draw(line, 2, sf::PrimitiveType::Lines);
-
-		DrawNode(InWindow, InNode->GetLeftNode(), xMin, xMax, yMin, location.y);
-		DrawNode(InWindow, InNode->GetRightNode(), xMin, xMax, location.y, yMax);
+		if (inFindLocation.y + inRadius >= location.y) // 위쪽 영역과 겹침
+			RangeSearch(inFindLocation, inRadius, inNode->GetRightNode(), OutNodes, inDepth + 1);
 	}
 }
 
@@ -417,7 +217,7 @@ void KDTree::DrawNode(sf::VertexArray& OutVertexArray, KDNode* InNode, float xMi
 	if (InNode == nullptr) return;
 
 	const sf::Vector2f& location = InNode->GetActor()->GetLocation();
-	const sf::Color color = InNode->GetDirty() ? sf::Color::Yellow : sf::Color::White;
+	const sf::Color color = InNode->GetActor()->IsOverlap() ? sf::Color::Yellow : sf::Color::White;
 	const uint32 axis = InNode->GetDepth() % KD_TREE::MAX_DEPTH;
 
 	if (axis == KD_TREE::X)
@@ -428,8 +228,8 @@ void KDTree::DrawNode(sf::VertexArray& OutVertexArray, KDNode* InNode, float xMi
 		OutVertexArray.append(v1);
 		OutVertexArray.append(v2);
 
-		DrawNode(OutVertexArray, InNode->GetLeftNode(), location.x, xMax, yMin, yMax);
-		DrawNode(OutVertexArray, InNode->GetRightNode(), xMin, location.x, yMin, yMax);
+		DrawNode(OutVertexArray, InNode->GetLeftNode(), xMin, location.x, yMin, yMax);
+		DrawNode(OutVertexArray, InNode->GetRightNode(), location.x, xMax, yMin, yMax);
 	}
 	else if (axis == KD_TREE::Y)
 	{
@@ -442,32 +242,4 @@ void KDTree::DrawNode(sf::VertexArray& OutVertexArray, KDNode* InNode, float xMi
 		DrawNode(OutVertexArray, InNode->GetLeftNode(), xMin, xMax, yMin, location.y);
 		DrawNode(OutVertexArray, InNode->GetRightNode(), xMin, xMax, location.y, yMax);
 	}
-}
-
-KDNode* KDTree::NextAvailableNode()
-{
-	if (0 == mAvailableNodeNumber.size())
-	{
-		wprintf(L"[KD-Tree] [NextAvailableNode] No nodes left\n");
-		return nullptr;
-	}
-
-	const uint16 nextNumber = mAvailableNodeNumber.front();
-	mAvailableNodeNumber.pop_front();
-
-	return mNodesPool.at(nextNumber);
-}
-
-bool KDTree::CompareLocation(const sf::Vector2f& inParentLocation, const sf::Vector2f& inNodeLocation, const uint16& inAxis)
-{
-	if (inAxis == KD_TREE::X)
-	{
-		return inNodeLocation.x > inParentLocation.x;
-	}
-	else if (inAxis == KD_TREE::Y)
-	{
-		return inNodeLocation.y < inParentLocation.y;
-	}
-
-	return false;
 }

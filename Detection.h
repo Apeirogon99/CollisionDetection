@@ -3,24 +3,32 @@
 class Detection
 {
 public:
+	static bool AABB(const sf::FloatRect& a, const sf::FloatRect& b)
+	{
+		return !(a.position.x + a.size.x <= b.position.x ||
+			b.position.x + b.size.x <= a.position.x ||
+			a.position.y + a.size.y <= b.position.y ||
+			b.position.y + b.size.y <= a.position.y);
+	}
+
+public:
     // 두 다각형 간의 충돌 검사
     static bool CheckCollision(Actor* InA, Actor* InB)
     {
 		if (InA->GetShapeType() == EShapeType::Box && InB->GetShapeType() == EShapeType::Box)
 		{
-			sf::RectangleShape* AttackRectangle = reinterpret_cast<sf::RectangleShape*>(InB->GetShape());
-			sf::RectangleShape* ActorRectangle = reinterpret_cast<sf::RectangleShape*>(InA->GetShape());
-
-			auto find = AttackRectangle->getGlobalBounds().findIntersection(ActorRectangle->getGlobalBounds());
-			if (find.has_value() == true)
+			if (Detection::AABB(InA->GetLocalBound(), InB->GetLocalBound()))
 			{
 				return true;
 			}
 		}
 		else if (InA->GetShapeType() == EShapeType::Circle && InB->GetShapeType() == EShapeType::Circle)
 		{
-			const float& distanceSquared = powf(InB->GetLocation().x - InA->GetLocation().x, 2) + powf(InB->GetLocation().y - InA->GetLocation().y, 2);
+			const float dx = InB->GetLocation().x - InA->GetLocation().x;
+			const float dy = InB->GetLocation().y - InA->GetLocation().y;
+			const float distanceSquared = dx * dx + dy * dy;
 			const float radiusSum = powf(InB->GetLocalRadius() + InA->GetLocalRadius(), 2);
+
 			if (distanceSquared <= radiusSum)
 			{
 				return true;

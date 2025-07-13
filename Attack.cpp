@@ -17,6 +17,23 @@ void Attack::SetAttackLocation(const sf::Vector2i& InLocation)
 	const float& y = static_cast<float>(InLocation.y);
 
 	mShape->setPosition({ x, y });
+	mShape->setOrigin(mShape->getGeometricCenter());
+}
+
+void Attack::AddAttackRange(const float InRange)
+{
+	sf::RectangleShape* rectangle = reinterpret_cast<sf::RectangleShape*>(mShape);
+
+	sf::Vector2f size = rectangle->getSize();
+	mSize = size.x + InRange;
+
+	if (mSize <= 10.0f)
+	{
+		mSize = 10.0f;
+	}
+
+	rectangle->setSize({ mSize, mSize });
+	rectangle->setOrigin(rectangle->getGeometricCenter());
 }
 
 void Attack::SetAttackCircumscriber(sf::VertexArray& InVertex)
