@@ -3,8 +3,6 @@
 CollisionDetection은 Array, KD-Tree, QuadTree에 대한 일부 충돌 검사에 대한 결과입니다. </br>
 테스트 환경 자체가 넓게 분산된 예제이기 때문에 상황에 따라 다를 수 있습니다. </br>
 
-주의 : QuadTree는 이득우 강사님의 QuadTree를 C++로 변환한 것입니다. </br>
-
 # 📋 목차
 - [문제 상황](#문제-상황)
 - [사용법](#사용법)
@@ -51,4 +49,5 @@ W = 공격의 크기를 10 감소 </br>
   - 많은 수의 충돌 검사를 처리해야한다면 KD-Tree, Quad-Tree가 공간 분할 구조이기에 유리함
   - 적은 수의 경우 충돌 검사를 처리시 Array가 빌드 시간이 없고 캐시 효율성으로 인해 더 빠를 수 있음
 
-
+# 참고
+[이득우의 꼭 배워야하는 게임 알고리즘](https://www.inflearn.com/course/%EA%B2%8C%EC%9E%84-%EC%95%8C%EA%B3%A0%EB%A6%AC%EC%A6%98/dashboard) QuadTree는 이득우 강사님의 QuadTree를 C++로 변환한 것입니다.
